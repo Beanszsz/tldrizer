@@ -1,103 +1,189 @@
-import Image from "next/image";
+'use client';
+
+import { useState } from 'react';
+import FileUpload from '@/components/FileUpload';
+import UrlInput from '@/components/UrlInput';
+import SummaryDisplay from '@/components/SummaryDisplay';
+import ModelSelector from '@/components/ModelSelector';
+import { Loader2, FileText } from 'lucide-react';
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.js
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [isLoading, setIsLoading] = useState(false);
+  const [summary, setSummary] = useState(null);
+  const [error, setError] = useState(null);
+  const [selectedProvider, setSelectedProvider] = useState('huggingface');
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const handleUrlSubmit = async (url) => {
+    setIsLoading(true);
+    setError(null);
+    setSummary(null);
+
+    try {
+      // Extract content from URL
+      const extractRes = await fetch('/api/extract-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+
+      if (!extractRes.ok) {
+        const errorData = await extractRes.json();
+        throw new Error(errorData.error || 'Failed to extract content');
+      }
+
+      const { content, title, wordCount } = await extractRes.json();
+
+      // Summarize content with selected provider
+      const summaryRes = await fetch('/api/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, provider: selectedProvider })
+      });
+
+      if (!summaryRes.ok) {
+        const errorData = await summaryRes.json();
+        throw new Error(errorData.error || 'Failed to generate summary');
+      }
+
+      const { summary: summaryText, provider, model } = await summaryRes.json();
+
+      setSummary({
+        text: summaryText,
+        title,
+        metadata: { wordCount, provider, model }
+      });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleFileSelect = async (file) => {
+    setIsLoading(true);
+    setError(null);
+    setSummary(null);
+
+    try {
+      // Extract content from PDF
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const extractRes = await fetch('/api/extract-pdf', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!extractRes.ok) {
+        const errorData = await extractRes.json();
+        throw new Error(errorData.error || 'Failed to extract PDF content');
+      }
+
+      const { content, title, wordCount, pageCount } = await extractRes.json();
+
+      // Summarize content with selected provider
+      const summaryRes = await fetch('/api/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, provider: selectedProvider })
+      });
+
+      if (!summaryRes.ok) {
+        const errorData = await summaryRes.json();
+        throw new Error(errorData.error || 'Failed to generate summary');
+      }
+
+      const { summary: summaryText, provider, model } = await summaryRes.json();
+
+      setSummary({
+        text: summaryText,
+        title,
+        metadata: { wordCount, pageCount, provider, model }
+      });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#1e1e1e] py-12 px-4">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <FileText className="w-12 h-12 text-blue-500" />
+            <h1 className="text-5xl font-bold text-white">TLDRizer</h1>
+          </div>
+          <p className="text-xl text-gray-400">
+            Summarize articles, blogs, and PDFs with AI
+          </p>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+
+        {/* Input Section */}
+        <div className="bg-[#252526] rounded-2xl shadow-2xl p-8 mb-8">
+          <div className="space-y-6">
+            {/* Model Selector */}
+            <ModelSelector 
+              selectedProvider={selectedProvider}
+              onProviderChange={setSelectedProvider}
+              isLoading={isLoading}
+            />
+
+            <div className="border-t border-gray-700 pt-6">
+              <h2 className="text-lg font-semibold text-gray-300 mb-3">
+                Enter Article URL
+              </h2>
+              <UrlInput onSubmit={handleUrlSubmit} isLoading={isLoading} />
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-700"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-[#252526] text-gray-500">OR</span>
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-lg font-semibold text-gray-300 mb-3">
+                Upload PDF File
+              </h2>
+              <FileUpload onFileSelect={handleFileSelect} isLoading={isLoading} />
+            </div>
+          </div>
+        </div>
+
+        {/* Loading State */}
+        {isLoading && (
+          <div className="bg-[#252526] rounded-xl shadow-2xl p-12 text-center">
+            <Loader2 className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
+            <p className="text-gray-300 text-lg">Processing and summarizing...</p>
+            <p className="text-gray-500 text-sm mt-2">
+              Using {selectedProvider === 'huggingface' ? 'Hugging Face' : 
+                     selectedProvider === 'openai' ? 'ChatGPT' : 'Claude Sonnet'}
+            </p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div className="bg-red-900/20 border border-red-800 rounded-xl p-6 text-center shadow-lg">
+            <p className="text-red-400 font-medium">{error}</p>
+          </div>
+        )}
+
+        {/* Summary Display */}
+        {summary && !isLoading && (
+          <SummaryDisplay
+            summary={summary.text}
+            title={summary.title}
+            metadata={summary.metadata}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        )}
+      </div>
     </div>
   );
 }
