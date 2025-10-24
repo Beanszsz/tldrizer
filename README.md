@@ -67,6 +67,6 @@ Open http://localhost:3000
 
 Built with Next.js 15 + React 19 + Tailwind CSS 4
 
-**"Additional Notes"**
+## Additional Notes
 
 I haven't tried the Claude and OpenAI models yet. Since I didn't have the funds to pay for them. I did try the Hugging Face model, and it worked. Would love to see if anyone can try the Claude and OpenAI models.
