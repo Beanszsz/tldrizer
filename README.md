@@ -51,7 +51,22 @@ Open http://localhost:3000
 2. Paste URL or upload PDF
 3. Get instant summary
 
-PS.
-I haven't tried the Claude and OpenAI models yet. Since I didn't have the funds to pay for them. I did try the Hugging Face model, and it worked. Would love to see if anyone can try the Claude and OpenAI models.
+## Common Issues
+
+**"Insufficient permissions" (HuggingFace)**
+→ Recreate token with "Make calls to Inference Providers" checked
+
+**"Model is loading" (HuggingFace)**
+→ Wait 30-60 seconds, first request loads model
+
+**"Failed to extract content"**
+→ Some sites block scraping, try different URL
+
+**"API key not configured"**
+→ Check .env.local exists and restart dev server
 
 Built with Next.js 15 + React 19 + Tailwind CSS 4
+
+**Additional Notes**
+
+I haven't tried the Claude and OpenAI models yet. Since I didn't have the funds to pay for them. I did try the Hugging Face model, and it worked. Would love to see if anyone can try the Claude and OpenAI models.
